@@ -336,8 +336,10 @@
         checkAuth();
         
         async function logout() {
-            await fetch(API + '/auth/logout', {method: 'POST'});
-            window.location.href = '/login';
+            try {
+                await fetch(API + '/auth/logout', {method: 'POST'});
+            } catch (e) {}
+            window.location.replace('/login');
         }
         
         // Tab navigation
