@@ -6,25 +6,25 @@
     <title>Airbnb Maintenance Tracker</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; }
         
-        .header { background: #ff5a5f; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .header { background: #2c3e50; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
         .header h1 { font-size: 1.5rem; }
         
         .nav { background: white; border-bottom: 1px solid #ddd; padding: 0 2rem; }
         .nav button { background: none; border: none; padding: 1rem 1.5rem; cursor: pointer; font-size: 1rem; color: #666; border-bottom: 3px solid transparent; }
-        .nav button:hover { color: #ff5a5f; }
-        .nav button.active { color: #ff5a5f; border-bottom-color: #ff5a5f; font-weight: 600; }
+        .nav button:hover { color: #2c3e50; }
+        .nav button.active { color: #2c3e50; border-bottom-color: #2c3e50; font-weight: 600; }
         
         .main { padding: 2rem; max-width: 1200px; margin: 0 auto; }
         
         .card { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1.5rem; margin-bottom: 1.5rem; }
         .card h2 { margin-bottom: 1rem; color: #333; }
         
-        .btn { background: #ff5a5f; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
-        .btn:hover { background: #e8484d; }
-        .btn.secondary { background: #666; }
-        .btn.danger { background: #dc3545; }
+        .btn { background: #3498db; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+        .btn:hover { background: #2980b9; }
+        .btn.secondary { background: #7f8c8d; }
+        .btn.danger { background: #e74c3c; }
         
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #eee; }
@@ -45,9 +45,9 @@
         .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
         .stat-card { background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .stat-card h3 { color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; }
-        .stat-card .value { font-size: 2rem; font-weight: bold; color: #333; }
-        .stat-card.paid .value { color: #28a745; }
-        .stat-card.unpaid .value { color: #dc3545; }
+        .stat-card .value { font-size: 2rem; font-weight: bold; color: #2c3e50; }
+        .stat-card.paid .value { color: #27ae60; }
+        .stat-card.unpaid .value { color: #e74c3c; }
         
         .badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; }
         .badge.complete { background: #d4edda; color: #155724; }
@@ -97,8 +97,8 @@
             </div>
             
             <div class="card" style="margin-top: 1.5rem;">
-                <h2>Monthly Breakdown</h2>
-                <div id="monthly-breakdown"></div>
+                <h2>Tasks Coming Up</h2>
+                <div id="tasks-coming-up"></div>
             </div>
         </div>
         
@@ -367,16 +367,40 @@
             document.getElementById('stat-unpaid').textContent = `$${summary.unpaid.toFixed(2)}`;
             document.getElementById('stat-total').textContent = `$${summary.total.toFixed(2)}`;
             
-            const projection = await fetch(`${API}/reports/projection`).then(r => r.json());
-            document.getElementById('stat-projection').textContent = `$${projection.yearly_projection.toFixed(2)}`;
+            // Get all incomplete tasks for projection
+            const tasks = await fetch(`${API}/tasks?status=incomplete`).then(r => r.json());
+            const projection = tasks.reduce((sum, t) => sum + (t.cost || 0), 0);
+            document.getElementById('stat-projection').textContent = `$${projection.toFixed(2)}`;
             
-            const monthly = await fetch(`${API}/reports/monthly`).then(r => r.json());
-            let html = '<table><tr><th>Property</th><th>Cost</th></tr>';
-            for (const [prop, cost] of Object.entries(monthly)) {
-                if (prop !== 'total') html += `<tr><td>${prop}</td><td>$${cost.toFixed(2)}</td></tr>`;
+            // Get incomplete tasks
+            const [tasks, props] = await Promise.all([
+                fetch(`${API}/tasks?status=incomplete`).then(r => r.json()),
+                fetch(`${API}/properties`).then(r => r.json())
+            ]);
+            
+            const propMap = Object.fromEntries(props.map(p => [p.id, p.name]));
+            
+            // Sort by date (earliest first)
+            tasks.sort((a, b) => new Date(a.start_date || '9999') - new Date(b.start_date || '9999'));
+            
+            // Take first 10 tasks
+            const upcomingTasks = tasks.slice(0, 10);
+            
+            let html = '<table><tr><th>Task</th><th>Property</th><th>Date</th><th>Cost</th></tr>';
+            if (upcomingTasks.length === 0) {
+                html = '<p class="empty">No upcoming tasks</p>';
+            } else {
+                for (const t of upcomingTasks) {
+                    html += `<tr>
+                        <td>${t.description}</td>
+                        <td>${propMap[t.property_id] || '-'}</td>
+                        <td>${t.start_date || '-'}</td>
+                        <td>$${(t.cost || 0).toFixed(2)}</td>
+                    </tr>`;
+                }
             }
-            html += `<tr><td><strong>Total</strong></td><td><strong>$${(monthly.total || 0).toFixed(2)}</strong></td></tr></table>`;
-            document.getElementById('monthly-breakdown').innerHTML = html;
+            html += '</table>';
+            document.getElementById('tasks-coming-up').innerHTML = html;
         }
         
         // Properties
