@@ -1,12 +1,19 @@
 from flask import Flask, jsonify, request, render_template
-from airbnb_maintenance import cloud_db
 import os
+
+print("Starting app...")
+
+try:
+    from airbnb_maintenance import cloud_db
+    print("Imported cloud_db")
+except Exception as e:
+    print(f"Error importing cloud_db: {e}")
+    raise
 
 app = Flask(__name__, template_folder='templates')
 
-# Check environment variables on startup
-if not os.environ.get('SUPABASE_URL') or not os.environ.get('SUPABASE_KEY'):
-    print("WARNING: SUPABASE_URL or SUPABASE_KEY not set!")
+print(f"SUPABASE_URL set: {bool(os.environ.get('SUPABASE_URL'))}")
+print(f"SUPABASE_KEY set: {bool(os.environ.get('SUPABASE_KEY'))}")
 
 PropertyDAO = cloud_db.PropertyDAO
 ContactDAO = cloud_db.ContactDAO
