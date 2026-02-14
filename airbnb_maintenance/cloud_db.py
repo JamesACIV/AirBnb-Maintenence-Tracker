@@ -2,14 +2,15 @@ import os
 from supabase import create_client, Client
 from typing import Optional, List
 
-SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
-SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '')
-
 def get_client() -> Client:
     """Get Supabase client."""
-    if not SUPABASE_URL or not SUPABASE_KEY:
-        raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set")
-    return create_client(SUPABASE_URL, SUPABASE_KEY)
+    supabase_url = os.environ.get('SUPABASE_URL', '')
+    supabase_key = os.environ.get('SUPABASE_KEY', '')
+    
+    if not supabase_url or not supabase_key:
+        raise ValueError("SUPABASE_URL and SUPABASE_KEY environment variables must be set")
+    
+    return create_client(supabase_url, supabase_key)
 
 
 class PropertyDAO:
