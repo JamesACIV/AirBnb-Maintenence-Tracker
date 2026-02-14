@@ -36,148 +36,152 @@ class AuthService:
 
 class PropertyDAO:
     @staticmethod
-    def create(data: dict) -> int:
+    def create(data: dict, user_id: str) -> int:
         client = get_client()
+        data['user_id'] = user_id
         result = client.table('properties').insert(data).execute()
         return result.data[0]['id']
     
     @staticmethod
-    def get_by_id(id: int) -> Optional[dict]:
+    def get_by_id(id: int, user_id: str) -> Optional[dict]:
         client = get_client()
-        result = client.table('properties').select('*').eq('id', id).execute()
+        result = client.table('properties').select('*').eq('id', id).eq('user_id', user_id).execute()
         return result.data[0] if result.data else None
     
     @staticmethod
-    def get_all() -> List[dict]:
+    def get_all(user_id: str) -> List[dict]:
         client = get_client()
-        result = client.table('properties').select('*').order('name').execute()
+        result = client.table('properties').select('*').eq('user_id', user_id).order('name').execute()
         return result.data
     
     @staticmethod
-    def update(id: int, data: dict) -> None:
+    def update(id: int, data: dict, user_id: str) -> None:
         client = get_client()
-        client.table('properties').update(data).eq('id', id).execute()
+        client.table('properties').update(data).eq('id', id).eq('user_id', user_id).execute()
     
     @staticmethod
-    def delete(id: int) -> None:
+    def delete(id: int, user_id: str) -> None:
         client = get_client()
-        client.table('properties').delete().eq('id', id).execute()
+        client.table('properties').delete().eq('id', id).eq('user_id', user_id).execute()
 
 
 class ContactDAO:
     @staticmethod
-    def create(data: dict) -> int:
+    def create(data: dict, user_id: str) -> int:
         client = get_client()
+        data['user_id'] = user_id
         result = client.table('contacts').insert(data).execute()
         return result.data[0]['id']
     
     @staticmethod
-    def get_by_id(id: int) -> Optional[dict]:
+    def get_by_id(id: int, user_id: str) -> Optional[dict]:
         client = get_client()
-        result = client.table('contacts').select('*').eq('id', id).execute()
+        result = client.table('contacts').select('*').eq('id', id).eq('user_id', user_id).execute()
         return result.data[0] if result.data else None
     
     @staticmethod
-    def get_all() -> List[dict]:
+    def get_all(user_id: str) -> List[dict]:
         client = get_client()
-        result = client.table('contacts').select('*').order('name').execute()
+        result = client.table('contacts').select('*').eq('user_id', user_id).order('name').execute()
         return result.data
     
     @staticmethod
-    def get_by_type(service_type: str) -> List[dict]:
+    def get_by_type(service_type: str, user_id: str) -> List[dict]:
         client = get_client()
-        result = client.table('contacts').select('*').eq('service_type', service_type).execute()
+        result = client.table('contacts').select('*').eq('service_type', service_type).eq('user_id', user_id).execute()
         return result.data
     
     @staticmethod
-    def update(id: int, data: dict) -> None:
+    def update(id: int, data: dict, user_id: str) -> None:
         client = get_client()
-        client.table('contacts').update(data).eq('id', id).execute()
+        client.table('contacts').update(data).eq('id', id).eq('user_id', user_id).execute()
     
     @staticmethod
-    def delete(id: int) -> None:
+    def delete(id: int, user_id: str) -> None:
         client = get_client()
-        client.table('contacts').delete().eq('id', id).execute()
+        client.table('contacts').delete().eq('id', id).eq('user_id', user_id).execute()
 
 
 class TaskDAO:
     @staticmethod
-    def create(data: dict) -> int:
+    def create(data: dict, user_id: str) -> int:
         client = get_client()
+        data['user_id'] = user_id
         result = client.table('tasks').insert(data).execute()
         return result.data[0]['id']
     
     @staticmethod
-    def get_by_id(id: int) -> Optional[dict]:
+    def get_by_id(id: int, user_id: str) -> Optional[dict]:
         client = get_client()
-        result = client.table('tasks').select('*').eq('id', id).execute()
+        result = client.table('tasks').select('*').eq('id', id).eq('user_id', user_id).execute()
         return result.data[0] if result.data else None
     
     @staticmethod
-    def get_all() -> List[dict]:
+    def get_all(user_id: str) -> List[dict]:
         client = get_client()
-        result = client.table('tasks').select('*').order('start_date', desc=True).execute()
+        result = client.table('tasks').select('*').eq('user_id', user_id).order('start_date', desc=True).execute()
         return result.data
     
     @staticmethod
-    def get_by_property(property_id: int) -> List[dict]:
+    def get_by_property(property_id: int, user_id: str) -> List[dict]:
         client = get_client()
-        result = client.table('tasks').select('*').eq('property_id', property_id).execute()
+        result = client.table('tasks').select('*').eq('property_id', property_id).eq('user_id', user_id).execute()
         return result.data
     
     @staticmethod
-    def get_unpaid() -> List[dict]:
+    def get_unpaid(user_id: str) -> List[dict]:
         client = get_client()
-        result = client.table('tasks').select('*').eq('payment_status', 'unpaid').execute()
+        result = client.table('tasks').select('*').eq('payment_status', 'unpaid').eq('user_id', user_id).execute()
         return result.data
     
     @staticmethod
-    def get_incomplete() -> List[dict]:
+    def get_incomplete(user_id: str) -> List[dict]:
         client = get_client()
-        result = client.table('tasks').select('*').eq('completion_status', 'incomplete').execute()
+        result = client.table('tasks').select('*').eq('completion_status', 'incomplete').eq('user_id', user_id).execute()
         return result.data
     
     @staticmethod
-    def get_recurring() -> List[dict]:
+    def get_recurring(user_id: str) -> List[dict]:
         client = get_client()
-        result = client.table('tasks').select('*').eq('recurring', 'yes').execute()
+        result = client.table('tasks').select('*').eq('recurring', 'yes').eq('user_id', user_id).execute()
         return result.data
     
     @staticmethod
-    def update(id: int, data: dict) -> None:
+    def update(id: int, data: dict, user_id: str) -> None:
         client = get_client()
-        client.table('tasks').update(data).eq('id', id).execute()
+        client.table('tasks').update(data).eq('id', id).eq('user_id', user_id).execute()
     
     @staticmethod
-    def delete(id: int) -> None:
+    def delete(id: int, user_id: str) -> None:
         client = get_client()
-        client.table('tasks').delete().eq('id', id).execute()
+        client.table('tasks').delete().eq('id', id).eq('user_id', user_id).execute()
 
 
 class ReportingService:
     @staticmethod
-    def monthly_breakdown(year: int, month: int) -> dict:
+    def monthly_breakdown(year: int, month: int, user_id: str) -> dict:
         client = get_client()
         month_str = f"{year}-{month:02d}%"
         
-        result = client.table('tasks').select('property_id,cost,properties!inner(name)').like('start_date', month_str).execute()
+        result = client.table('tasks').select('property_id,cost,properties!inner(name)').like('start_date', month_str).eq('tasks.user_id', user_id).execute()
         
         breakdown = {}
         total = 0
         for row in result.data:
-            prop_name = row['properties']['name']
-            cost = row['cost'] or 0
-            breakdown[prop_name] = breakdown.get(prop_name, 0) + cost
-            total += cost
+            if row.get('properties'):
+                prop_name = row['properties']['name']
+                cost = row['cost'] or 0
+                breakdown[prop_name] = breakdown.get(prop_name, 0) + cost
+                total += cost
         
         breakdown['total'] = total
         return breakdown
     
     @staticmethod
-    def yearly_projection() -> float:
+    def yearly_projection(user_id: str) -> float:
         client = get_client()
         
-        result = client.table('tasks').select('cost,recurrence_interval').eq('recurring', 'yes').eq('completion_status', 'complete').execute()
+        result = client.table('tasks').select('cost,recurrence_interval').eq('recurring', 'yes').eq('completion_status', 'complete').eq('user_id', user_id).execute()
         
         yearly_total = 0
         for row in result.data:
@@ -198,11 +202,11 @@ class ReportingService:
         return yearly_total
     
     @staticmethod
-    def cost_summary() -> dict:
+    def cost_summary(user_id: str) -> dict:
         client = get_client()
         
-        paid_result = client.table('tasks').select('cost').eq('payment_status', 'paid').execute()
-        unpaid_result = client.table('tasks').select('cost').eq('payment_status', 'unpaid').execute()
+        paid_result = client.table('tasks').select('cost').eq('payment_status', 'paid').eq('user_id', user_id).execute()
+        unpaid_result = client.table('tasks').select('cost').eq('payment_status', 'unpaid').eq('user_id', user_id).execute()
         
         paid = sum(r['cost'] or 0 for r in paid_result.data)
         unpaid = sum(r['cost'] or 0 for r in unpaid_result.data)

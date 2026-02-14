@@ -612,10 +612,17 @@
         }
         
         // Modal helpers
-        function openModal(type) {
+        async function openModal(type) {
             document.getElementById(`${type}-id`).value = '';
             document.querySelectorAll(`#${type}-modal input, #${type}-modal select, #${type}-modal textarea`).forEach(el => el.value = '');
             if (type === 'task') {
+                // Load properties and contacts for dropdowns
+                const [props, contacts] = await Promise.all([
+                    fetch(`${API}/properties`).then(r => r.json()),
+                    fetch(`${API}/contacts`).then(r => r.json())
+                ]);
+                document.getElementById('task-property').innerHTML = '<option value="">Select Property</option>' + props.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+                document.getElementById('task-contact').innerHTML = '<option value="">None</option>' + contacts.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
                 document.getElementById('task-recurring').value = 'no';
                 toggleInterval();
             }
