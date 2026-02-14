@@ -1,7 +1,12 @@
 from flask import Flask, jsonify, request, render_template
 from airbnb_maintenance import cloud_db
+import os
 
 app = Flask(__name__, template_folder='templates')
+
+# Check environment variables on startup
+if not os.environ.get('SUPABASE_URL') or not os.environ.get('SUPABASE_KEY'):
+    print("WARNING: SUPABASE_URL or SUPABASE_KEY not set!")
 
 PropertyDAO = cloud_db.PropertyDAO
 ContactDAO = cloud_db.ContactDAO
@@ -14,10 +19,18 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/api/health')
+def health():
+    return jsonify({'status': 'ok', 'supabase_url': bool(os.environ.get('SUPABASE_URL'))})
+
+
 # Properties
 @app.route('/api/properties', methods=['GET'])
 def get_properties():
-    return jsonify(PropertyDAO.get_all())
+    try:
+        return jsonify(PropertyDAO.get_all())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/properties/<int:id>', methods=['GET'])
 def get_property(id):
