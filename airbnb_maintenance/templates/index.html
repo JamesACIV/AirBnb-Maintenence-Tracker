@@ -64,6 +64,7 @@
 <body>
     <div class="header">
         <h1>Airbnb Maintenance Tracker</h1>
+        <button class="btn" onclick="logout()" style="background: rgba(255,255,255,0.2);">Logout</button>
     </div>
     
     <div class="nav">
@@ -134,6 +135,7 @@
                         <tr>
                             <th>Description</th>
                             <th>Property</th>
+                            <th>Contact</th>
                             <th>Cost</th>
                             <th>Status</th>
                             <th>Payment</th>
@@ -319,6 +321,25 @@
         
         const API = CLOUD_API_URL || 'http://localhost:5000/api';
         
+        // Check auth on load
+        async function checkAuth() {
+            try {
+                const res = await fetch(API + '/auth/me');
+                const data = await res.json();
+                if (!data.user) {
+                    window.location.href = '/login';
+                }
+            } catch (e) {
+                window.location.href = '/login';
+            }
+        }
+        checkAuth();
+        
+        async function logout() {
+            await fetch(API + '/auth/logout', {method: 'POST'});
+            window.location.href = '/login';
+        }
+        
         // Tab navigation
         document.querySelectorAll('.nav button').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -438,6 +459,7 @@
                 <tr>
                     <td>${t.description}</td>
                     <td>${propMap[t.property_id] || '-'}</td>
+                    <td>${contactMap[t.contact_id] || '-'}</td>
                     <td>$${t.cost.toFixed(2)}</td>
                     <td><span class="badge ${t.completion_status}">${t.completion_status}</span></td>
                     <td><span class="badge ${t.payment_status}">${t.payment_status}</span></td>
@@ -454,7 +476,15 @@
         }
         
         async function editTask(id) {
-            const task = await fetch(`${API}/tasks/${id}`).then(r => r.json());
+            const [task, props, contacts] = await Promise.all([
+                fetch(`${API}/tasks/${id}`).then(r => r.json()),
+                fetch(`${API}/properties`).then(r => r.json()),
+                fetch(`${API}/contacts`).then(r => r.json())
+            ]);
+            
+            document.getElementById('task-property').innerHTML = props.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+            document.getElementById('task-contact').innerHTML = '<option value="">None</option>' + contacts.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            
             document.getElementById('task-id').value = task.id;
             document.getElementById('task-property').value = task.property_id || '';
             document.getElementById('task-description').value = task.description;

@@ -1,16 +1,19 @@
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, session, redirect, url_for
 import os
+from functools import wraps
 
 print("Starting app...")
 
 try:
     from airbnb_maintenance import cloud_db
+    from airbnb_maintenance.cloud_db import AuthService
     print("Imported cloud_db")
 except Exception as e:
     print(f"Error importing cloud_db: {e}")
     raise
 
 app = Flask(__name__, template_folder='templates')
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
 print(f"SUPABASE_URL set: {bool(os.environ.get('SUPABASE_URL'))}")
 print(f"SUPABASE_KEY set: {bool(os.environ.get('SUPABASE_KEY'))}")
@@ -21,14 +24,61 @@ TaskDAO = cloud_db.TaskDAO
 ReportingService = cloud_db.ReportingService
 
 
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user' not in session:
+            return jsonify({'error': 'Not authenticated'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+
 @app.route('/')
 def index():
-    return render_template('index.html')
+    if 'user' in session:
+        return render_template('index.html', logged_in=True, user=session['user'])
+    return render_template('login.html')
+
+
+# Auth routes
+@app.route('/api/auth/signup', methods=['POST'])
+def signup():
+    data = request.json
+    try:
+        result = AuthService.sign_up(data.get('email'), data.get('password'))
+        return jsonify({'message': 'Signup successful. Please check your email to verify.', 'user': str(result.user)})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    data = request.json
+    try:
+        result = AuthService.sign_in(data.get('email'), data.get('password'))
+        session['user'] = result.user.email
+        session['access_token'] = result.session.access_token
+        return jsonify({'message': 'Login successful', 'user': result.user.email})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 401
+
+
+@app.route('/api/auth/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return jsonify({'message': 'Logged out'})
+
+
+@app.route('/api/auth/me', methods=['GET'])
+def me():
+    if 'user' in session:
+        return jsonify({'user': session['user']})
+    return jsonify({'user': None})
 
 
 @app.route('/api/health')
 def health():
-    return jsonify({'status': 'ok', 'supabase_url': bool(os.environ.get('SUPABASE_URL'))})
+    return jsonify({'status': 'ok', 'logged_in': 'user' in session})
 
 
 # Properties

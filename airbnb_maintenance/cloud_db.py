@@ -3,7 +3,6 @@ from supabase import create_client, Client
 from typing import Optional, List
 
 def get_client() -> Client:
-    """Get Supabase client."""
     supabase_url = os.environ.get('SUPABASE_URL', '')
     supabase_key = os.environ.get('SUPABASE_KEY', '')
     
@@ -11,6 +10,28 @@ def get_client() -> Client:
         raise ValueError("SUPABASE_URL and SUPABASE_KEY environment variables must be set")
     
     return create_client(supabase_url, supabase_key)
+
+
+class AuthService:
+    @staticmethod
+    def sign_up(email: str, password: str):
+        client = get_client()
+        return client.auth.sign_up({"email": email, "password": password})
+    
+    @staticmethod
+    def sign_in(email: str, password: str):
+        client = get_client()
+        return client.auth.sign_in_with_password({"email": email, "password": password})
+    
+    @staticmethod
+    def sign_out():
+        client = get_client()
+        return client.auth.sign_out()
+    
+    @staticmethod
+    def get_user(token: str):
+        client = get_client()
+        return client.auth.get_user(token)
 
 
 class PropertyDAO:
