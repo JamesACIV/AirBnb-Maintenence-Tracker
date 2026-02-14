@@ -367,16 +367,15 @@
             document.getElementById('stat-unpaid').textContent = `$${summary.unpaid.toFixed(2)}`;
             document.getElementById('stat-total').textContent = `$${summary.total.toFixed(2)}`;
             
-            // Get all incomplete tasks for projection
-            const tasks = await fetch(`${API}/tasks?status=incomplete`).then(r => r.json());
-            const projection = tasks.reduce((sum, t) => sum + (t.cost || 0), 0);
-            document.getElementById('stat-projection').textContent = `$${projection.toFixed(2)}`;
-            
             // Get incomplete tasks
             const [tasks, props] = await Promise.all([
                 fetch(`${API}/tasks?status=incomplete`).then(r => r.json()),
                 fetch(`${API}/properties`).then(r => r.json())
             ]);
+            
+            // Calculate projection from incomplete tasks
+            const projection = tasks.reduce((sum, t) => sum + (t.cost || 0), 0);
+            document.getElementById('stat-projection').textContent = `$${projection.toFixed(2)}`;
             
             const propMap = Object.fromEntries(props.map(p => [p.id, p.name]));
             
