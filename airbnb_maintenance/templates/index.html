@@ -385,7 +385,21 @@
             // Take first 10 tasks
             const upcomingTasks = tasks.slice(0, 10);
             
-            let html = '<table><tr><th>Task</th><th>Property</th><th>Date</th><th>Cost</th></tr>';
+            // Function to calculate days until date
+            const getDaysUntil = (dateStr) => {
+                if (!dateStr) return '-';
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const taskDate = new Date(dateStr);
+                taskDate.setHours(0, 0, 0, 0);
+                const diff = Math.ceil((taskDate - today) / (1000 * 60 * 60 * 24));
+                if (diff < 0) return `${Math.abs(diff)} days overdue`;
+                if (diff === 0) return 'Today';
+                if (diff === 1) return 'Tomorrow';
+                return `${diff} days`;
+            };
+            
+            let html = '<table><tr><th>Task</th><th>Property</th><th>Due In</th><th>Cost</th></tr>';
             if (upcomingTasks.length === 0) {
                 html = '<p class="empty">No upcoming tasks</p>';
             } else {
@@ -393,7 +407,7 @@
                     html += `<tr>
                         <td>${t.description}</td>
                         <td>${propMap[t.property_id] || '-'}</td>
-                        <td>${t.start_date || '-'}</td>
+                        <td>${getDaysUntil(t.start_date)}</td>
                         <td>$${(t.cost || 0).toFixed(2)}</td>
                     </tr>`;
                 }
