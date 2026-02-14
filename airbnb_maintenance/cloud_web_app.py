@@ -59,7 +59,9 @@ def login():
     data = request.json
     try:
         result = AuthService.sign_in(data.get('email'), data.get('password'))
-        session['user_id'] = result.user.id
+        # Convert user id to string
+        user_id = str(result.user.id) if result.user else None
+        session['user_id'] = user_id
         session['user'] = result.user.email
         return jsonify({'message': 'Login successful', 'user': result.user.email})
     except Exception as e:
