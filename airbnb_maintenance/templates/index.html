@@ -202,6 +202,7 @@
                             <th>Description</th>
                             <th>Property</th>
                             <th>Contact</th>
+                            <th>When</th>
                             <th>Cost</th>
                             <th>Status</th>
                             <th>Payment</th>
@@ -299,8 +300,16 @@
                     <input type="date" id="task-start-date">
                 </div>
                 <div class="form-group">
+                    <label>Start Time (Optional)</label>
+                    <input type="time" id="task-start-time">
+                </div>
+                <div class="form-group">
                     <label>End Date</label>
                     <input type="date" id="task-end-date">
+                </div>
+                <div class="form-group">
+                    <label>End Time (Optional)</label>
+                    <input type="time" id="task-end-time">
                 </div>
                 <div class="form-group">
                     <label>Recurring</label>
@@ -559,10 +568,17 @@
             
             const propMap = Object.fromEntries(props.map(p => [p.id, p.name]));
             const contactMap = Object.fromEntries(contacts.map(c => [c.id, c.name]));
+
+            const formatWhen = (t) => {
+                const start = [t.start_date, t.start_time].filter(Boolean).join(' ');
+                const end = [t.end_date, t.end_time].filter(Boolean).join(' ');
+                if (start && end) return `${start} -> ${end}`;
+                return start || end || '-';
+            };
             
             const tbody = document.getElementById('tasks-list');
             if (tasks.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="empty">No tasks yet</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="empty">No tasks yet</td></tr>';
                 return;
             }
             tbody.innerHTML = tasks.map(t => `
@@ -570,6 +586,7 @@
                     <td>${t.description}</td>
                     <td>${propMap[t.property_id] || '-'}</td>
                     <td>${contactMap[t.contact_id] || '-'}</td>
+                    <td>${formatWhen(t)}</td>
                     <td>$${t.cost.toFixed(2)}</td>
                     <td><span class="badge ${t.completion_status}">${t.completion_status}</span></td>
                     <td><span class="badge ${t.payment_status}">${t.payment_status}</span></td>
@@ -601,7 +618,9 @@
             document.getElementById('task-contact').value = task.contact_id || '';
             document.getElementById('task-cost').value = task.cost;
             document.getElementById('task-start-date').value = task.start_date;
+            document.getElementById('task-start-time').value = task.start_time || '';
             document.getElementById('task-end-date').value = task.end_date;
+            document.getElementById('task-end-time').value = task.end_time || '';
             document.getElementById('task-recurring').value = task.recurring;
             document.getElementById('task-interval').value = task.recurrence_interval || 'monthly';
             document.getElementById('task-completion').value = task.completion_status;
@@ -620,7 +639,9 @@
                 description: document.getElementById('task-description').value,
                 cost: parseFloat(document.getElementById('task-cost').value) || 0,
                 start_date: document.getElementById('task-start-date').value,
+                start_time: document.getElementById('task-start-time').value,
                 end_date: document.getElementById('task-end-date').value,
+                end_time: document.getElementById('task-end-time').value,
                 recurring: document.getElementById('task-recurring').value,
                 recurrence_interval: document.getElementById('task-interval').value,
                 completion_status: document.getElementById('task-completion').value,
