@@ -125,6 +125,45 @@
         
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+
+        .toasts {
+            position: fixed;
+            right: 1rem;
+            bottom: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            z-index: 9999;
+            max-width: min(420px, calc(100vw - 2rem));
+        }
+
+        .toast {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+            padding: 0.75rem 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+        .toast .msg { color: var(--text); font-size: 0.95rem; line-height: 1.2; }
+        .toast .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
+        .toast.success { border-left: 4px solid var(--ok); }
+        .toast.error { border-left: 4px solid var(--danger); }
+        .toast.info { border-left: 4px solid var(--accent-weak); }
+
+        .toast-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0.35rem 0.55rem;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .toast-btn:hover { background: #f3f4f6; }
     </style>
 </head>
 <body>
@@ -237,6 +276,8 @@
             </div>
         </div>
     </div>
+
+    <div id="toast-root" class="toasts" aria-live="polite" aria-atomic="true"></div>
     
     <!-- Property Modal -->
     <div id="property-modal" class="modal">
@@ -265,7 +306,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn secondary" onclick="closeModal('property')">Cancel</button>
-                <button class="btn" onclick="saveProperty()">Save</button>
+                <button class="btn" onclick="saveProperty(this)">Save</button>
             </div>
         </div>
     </div>
@@ -348,7 +389,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn secondary" onclick="closeModal('task')">Cancel</button>
-                <button class="btn" onclick="saveTask()">Save</button>
+                <button class="btn" onclick="saveTask(this)">Save</button>
             </div>
         </div>
     </div>
@@ -385,13 +426,113 @@
             </div>
             <div class="modal-footer">
                 <button class="btn secondary" onclick="closeModal('contact')">Cancel</button>
-                <button class="btn" onclick="saveContact()">Save</button>
+                <button class="btn" onclick="saveContact(this)">Save</button>
             </div>
         </div>
     </div>
 
     <script>
         const API = window.location.origin + '/api';
+
+        const toastRoot = document.getElementById('toast-root');
+
+        function showToast(message, type = 'info', options = {}) {
+            const { timeoutMs = 2500, actions = [] } = options;
+
+            const el = document.createElement('div');
+            el.className = `toast ${type}`;
+
+            const msg = document.createElement('div');
+            msg.className = 'msg';
+            msg.textContent = message;
+
+            const actionsWrap = document.createElement('div');
+            actionsWrap.className = 'actions';
+
+            for (const action of actions) {
+                const b = document.createElement('button');
+                b.className = 'toast-btn';
+                b.textContent = action.label;
+                b.onclick = async () => {
+                    try {
+                        await action.onClick();
+                    } finally {
+                        el.remove();
+                    }
+                };
+                actionsWrap.appendChild(b);
+            }
+
+            el.appendChild(msg);
+            if (actions.length) el.appendChild(actionsWrap);
+            toastRoot.appendChild(el);
+
+            if (timeoutMs) {
+                setTimeout(() => {
+                    if (el.isConnected) el.remove();
+                }, timeoutMs);
+            }
+        }
+
+        function setButtonBusy(btn, busy, busyText) {
+            if (!btn) return;
+            if (busy) {
+                btn.dataset._prevText = btn.textContent;
+                btn.textContent = busyText || 'Working...';
+                btn.disabled = true;
+                btn.style.opacity = '0.75';
+                btn.style.cursor = 'not-allowed';
+            } else {
+                btn.textContent = btn.dataset._prevText || btn.textContent;
+                btn.disabled = false;
+                btn.style.opacity = '';
+                btn.style.cursor = '';
+                delete btn.dataset._prevText;
+            }
+        }
+
+        async function apiJson(url, options = {}) {
+            const res = await fetch(url, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(options.headers || {})
+                }
+            });
+            let data = null;
+            try {
+                data = await res.json();
+            } catch (e) {
+                // ignore
+            }
+            if (!res.ok) {
+                const msg = (data && (data.error || data.message)) || `Request failed (${res.status})`;
+                throw new Error(msg);
+            }
+            return data;
+        }
+
+        function showUndoToast(message, onUndo) {
+            let undone = false;
+            const timer = setTimeout(() => {
+                // after timeout, toast disappears automatically
+            }, 5000);
+
+            showToast(message, 'info', {
+                timeoutMs: 5000,
+                actions: [
+                    {
+                        label: 'Undo',
+                        onClick: async () => {
+                            if (undone) return;
+                            undone = true;
+                            clearTimeout(timer);
+                            await onUndo();
+                        }
+                    }
+                ]
+            });
+        }
         
         // Check auth on load
         async function checkAuth() {
@@ -434,18 +575,26 @@
         
         // Dashboard
         async function loadDashboard() {
-            const summary = await fetch(`${API}/reports/summary`).then(r => r.json());
+            let summary;
+            let projection;
+            let unpaidTasks;
+            let props;
+            try {
+                [summary, projection, unpaidTasks, props] = await Promise.all([
+                    apiJson(`${API}/reports/summary`),
+                    apiJson(`${API}/reports/projection`),
+                    apiJson(`${API}/tasks?status=unpaid`),
+                    apiJson(`${API}/properties`)
+                ]);
+            } catch (e) {
+                showToast(e.message || 'Failed to load dashboard', 'error');
+                return;
+            }
+
             document.getElementById('stat-paid').textContent = `$${(summary.paid || 0).toFixed(2)}`;
             document.getElementById('stat-unpaid').textContent = `$${(summary.unpaid || 0).toFixed(2)}`;
             document.getElementById('stat-total').textContent = `$${(summary.total || 0).toFixed(2)}`;
-
-            const projection = await fetch(`${API}/reports/projection`).then(r => r.json());
             document.getElementById('stat-projection').textContent = `$${(projection.yearly_projection || 0).toFixed(2)}`;
-
-            const [unpaidTasks, props] = await Promise.all([
-                fetch(`${API}/tasks?status=unpaid`).then(r => r.json()),
-                fetch(`${API}/properties`).then(r => r.json())
-            ]);
 
             const propMap = Object.fromEntries((props || []).map(p => [p.id, p.name]));
 
@@ -498,7 +647,7 @@
         
         // Properties
         async function loadProperties() {
-            const props = await fetch(`${API}/properties`).then(r => r.json());
+            const props = await apiJson(`${API}/properties`);
             const tbody = document.getElementById('properties-list');
             if (props.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" class="empty">No properties yet</td></tr>';
@@ -511,7 +660,7 @@
                     <td><span class="badge ${p.status}">${p.status}</span></td>
                     <td>
                         <button class="btn" onclick="editProperty(${p.id}, '${p.name}', '${p.address}', '${p.status}')">Edit</button>
-                        <button class="btn danger" onclick="deleteProperty(${p.id})">Delete</button>
+                        <button class="btn danger" onclick="deleteProperty(${p.id}, this)">Delete</button>
                     </td>
                 </tr>
             `).join('');
@@ -526,44 +675,64 @@
             document.getElementById('property-modal').classList.add('active');
         }
         
-        async function saveProperty() {
+        async function saveProperty(btn) {
+            setButtonBusy(btn, true, 'Saving...');
             const id = document.getElementById('property-id').value;
             const data = {
                 name: document.getElementById('property-name').value,
                 address: document.getElementById('property-address').value,
                 status: document.getElementById('property-status').value
             };
-            
-            if (id) {
-                await fetch(`${API}/properties/${id}`, {
-                    method: 'PUT',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(data)
-                });
-            } else {
-                await fetch(`${API}/properties`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(data)
-                });
+
+            try {
+                if (id) {
+                    await apiJson(`${API}/properties/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+                } else {
+                    await apiJson(`${API}/properties`, { method: 'POST', body: JSON.stringify(data) });
+                }
+                closeModal('property');
+                await loadProperties();
+                showToast('Property saved', 'success');
+            } catch (e) {
+                showToast(e.message || 'Failed to save property', 'error');
+            } finally {
+                setButtonBusy(btn, false);
             }
-            closeModal('property');
-            loadProperties();
         }
-        
-        async function deleteProperty(id) {
-            if (confirm('Delete this property?')) {
-                await fetch(`${API}/properties/${id}`, {method: 'DELETE'});
-                loadProperties();
+
+        async function deleteProperty(id, btn) {
+            if (!confirm('Delete this property?')) return;
+            setButtonBusy(btn, true, 'Deleting...');
+            try {
+                const snapshot = await apiJson(`${API}/properties/${id}`);
+                await apiJson(`${API}/properties/${id}`, { method: 'DELETE' });
+                await loadProperties();
+                showUndoToast('Property deleted', async () => {
+                    try {
+                        await apiJson(`${API}/properties`, { method: 'POST', body: JSON.stringify({
+                            name: snapshot.name,
+                            address: snapshot.address,
+                            status: snapshot.status
+                        })});
+                        await loadProperties();
+                        showToast('Undo complete', 'success');
+                    } catch (e) {
+                        showToast(e.message || 'Undo failed', 'error');
+                    }
+                });
+            } catch (e) {
+                showToast(e.message || 'Delete failed', 'error');
+            } finally {
+                setButtonBusy(btn, false);
             }
         }
         
         // Tasks
         async function loadTasks() {
             const [tasks, props, contacts] = await Promise.all([
-                fetch(`${API}/tasks`).then(r => r.json()),
-                fetch(`${API}/properties`).then(r => r.json()),
-                fetch(`${API}/contacts`).then(r => r.json())
+                apiJson(`${API}/tasks`),
+                apiJson(`${API}/properties`),
+                apiJson(`${API}/contacts`)
             ]);
             
             const propMap = Object.fromEntries(props.map(p => [p.id, p.name]));
@@ -592,7 +761,7 @@
                     <td><span class="badge ${t.payment_status}">${t.payment_status}</span></td>
                     <td>
                         <button class="btn" onclick="editTask(${t.id})">Edit</button>
-                        <button class="btn danger" onclick="deleteTask(${t.id})">Delete</button>
+                        <button class="btn danger" onclick="deleteTask(${t.id}, this)">Delete</button>
                     </td>
                 </tr>
             `).join('');
@@ -604,9 +773,9 @@
         
         async function editTask(id) {
             const [task, props, contacts] = await Promise.all([
-                fetch(`${API}/tasks/${id}`).then(r => r.json()),
-                fetch(`${API}/properties`).then(r => r.json()),
-                fetch(`${API}/contacts`).then(r => r.json())
+                apiJson(`${API}/tasks/${id}`),
+                apiJson(`${API}/properties`),
+                apiJson(`${API}/contacts`)
             ]);
             
             document.getElementById('task-property').innerHTML = props.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
@@ -631,7 +800,8 @@
             toggleInterval();
         }
         
-        async function saveTask() {
+        async function saveTask(btn) {
+            setButtonBusy(btn, true, 'Saving...');
             const id = document.getElementById('task-id').value;
             const data = {
                 property_id: document.getElementById('task-property').value || null,
@@ -648,34 +818,51 @@
                 payment_status: document.getElementById('task-payment').value,
                 notes: document.getElementById('task-notes').value
             };
-            
-            if (id) {
-                await fetch(`${API}/tasks/${id}`, {
-                    method: 'PUT',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(data)
-                });
-            } else {
-                await fetch(`${API}/tasks`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(data)
-                });
+
+            try {
+                if (id) {
+                    await apiJson(`${API}/tasks/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+                } else {
+                    await apiJson(`${API}/tasks`, { method: 'POST', body: JSON.stringify(data) });
+                }
+                closeModal('task');
+                await loadTasks();
+                showToast('Task saved', 'success');
+            } catch (e) {
+                showToast(e.message || 'Failed to save task', 'error');
+            } finally {
+                setButtonBusy(btn, false);
             }
-            closeModal('task');
-            loadTasks();
         }
-        
-        async function deleteTask(id) {
-            if (confirm('Delete this task?')) {
-                await fetch(`${API}/tasks/${id}`, {method: 'DELETE'});
-                loadTasks();
+
+        async function deleteTask(id, btn) {
+            if (!confirm('Delete this task?')) return;
+            setButtonBusy(btn, true, 'Deleting...');
+            try {
+                const snapshot = await apiJson(`${API}/tasks/${id}`);
+                await apiJson(`${API}/tasks/${id}`, { method: 'DELETE' });
+                await loadTasks();
+                showUndoToast('Task deleted', async () => {
+                    try {
+                        const copy = { ...snapshot };
+                        delete copy.id;
+                        await apiJson(`${API}/tasks`, { method: 'POST', body: JSON.stringify(copy) });
+                        await loadTasks();
+                        showToast('Undo complete', 'success');
+                    } catch (e) {
+                        showToast(e.message || 'Undo failed', 'error');
+                    }
+                });
+            } catch (e) {
+                showToast(e.message || 'Delete failed', 'error');
+            } finally {
+                setButtonBusy(btn, false);
             }
         }
         
         // Contacts
         async function loadContacts() {
-            const contacts = await fetch(`${API}/contacts`).then(r => r.json());
+            const contacts = await apiJson(`${API}/contacts`);
             const tbody = document.getElementById('contacts-list');
             if (contacts.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="empty">No contacts yet</td></tr>';
@@ -690,14 +877,14 @@
                     <td>${c.email || '-'}</td>
                     <td>
                         <button class="btn" onclick="editContact(${c.id})">Edit</button>
-                        <button class="btn danger" onclick="deleteContact(${c.id})">Delete</button>
+                        <button class="btn danger" onclick="deleteContact(${c.id}, this)">Delete</button>
                     </td>
                 </tr>
             `).join('');
         }
         
         async function editContact(id) {
-            const contact = await fetch(`${API}/contacts/${id}`).then(r => r.json());
+            const contact = await apiJson(`${API}/contacts/${id}`);
             document.getElementById('contact-id').value = contact.id;
             document.getElementById('contact-name').value = contact.name;
             document.getElementById('contact-company').value = contact.company || '';
@@ -708,7 +895,8 @@
             document.getElementById('contact-modal').classList.add('active');
         }
         
-        async function saveContact() {
+        async function saveContact(btn) {
+            setButtonBusy(btn, true, 'Saving...');
             const id = document.getElementById('contact-id').value;
             const data = {
                 name: document.getElementById('contact-name').value,
@@ -717,28 +905,45 @@
                 phone: document.getElementById('contact-phone').value,
                 email: document.getElementById('contact-email').value
             };
-            
-            if (id) {
-                await fetch(`${API}/contacts/${id}`, {
-                    method: 'PUT',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(data)
-                });
-            } else {
-                await fetch(`${API}/contacts`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(data)
-                });
+
+            try {
+                if (id) {
+                    await apiJson(`${API}/contacts/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+                } else {
+                    await apiJson(`${API}/contacts`, { method: 'POST', body: JSON.stringify(data) });
+                }
+                closeModal('contact');
+                await loadContacts();
+                showToast('Contact saved', 'success');
+            } catch (e) {
+                showToast(e.message || 'Failed to save contact', 'error');
+            } finally {
+                setButtonBusy(btn, false);
             }
-            closeModal('contact');
-            loadContacts();
         }
         
-        async function deleteContact(id) {
-            if (confirm('Delete this contact?')) {
-                await fetch(`${API}/contacts/${id}`, {method: 'DELETE'});
-                loadContacts();
+        async function deleteContact(id, btn) {
+            if (!confirm('Delete this contact?')) return;
+            setButtonBusy(btn, true, 'Deleting...');
+            try {
+                const snapshot = await apiJson(`${API}/contacts/${id}`);
+                await apiJson(`${API}/contacts/${id}`, { method: 'DELETE' });
+                await loadContacts();
+                showUndoToast('Contact deleted', async () => {
+                    try {
+                        const copy = { ...snapshot };
+                        delete copy.id;
+                        await apiJson(`${API}/contacts`, { method: 'POST', body: JSON.stringify(copy) });
+                        await loadContacts();
+                        showToast('Undo complete', 'success');
+                    } catch (e) {
+                        showToast(e.message || 'Undo failed', 'error');
+                    }
+                });
+            } catch (e) {
+                showToast(e.message || 'Delete failed', 'error');
+            } finally {
+                setButtonBusy(btn, false);
             }
         }
         
@@ -767,7 +972,7 @@
                     document.getElementById('task-contact').innerHTML = '<option value="">None</option>' + contacts.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
                 } catch (e) {
                     console.error(e);
-                    alert('Error loading data. Please log in again.');
+                    showToast('Error loading data. Please log in again.', 'error');
                     window.location.href = '/login';
                     return;
                 }
