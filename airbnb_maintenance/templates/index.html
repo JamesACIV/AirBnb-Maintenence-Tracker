@@ -5,57 +5,123 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Airbnb Maintenance Tracker</title>
     <style>
+        :root {
+            --bg: #f6f7f9;
+            --surface: #ffffff;
+            --text: #111827;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+            --shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+            --accent: #111827;
+            --accent-weak: #374151;
+            --danger: #b91c1c;
+            --ok: #047857;
+            --warn: #b45309;
+            --radius: 10px;
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; }
-        
-        .header { background: #2c3e50; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
-        .header h1 { font-size: 1.5rem; }
-        
-        .nav { background: white; border-bottom: 1px solid #ddd; padding: 0 2rem; }
-        .nav button { background: none; border: none; padding: 1rem 1.5rem; cursor: pointer; font-size: 1rem; color: #666; border-bottom: 3px solid transparent; }
-        .nav button:hover { color: #2c3e50; }
-        .nav button.active { color: #2c3e50; border-bottom-color: #2c3e50; font-weight: 600; }
-        
-        .main { padding: 2rem; max-width: 1200px; margin: 0 auto; }
-        
-        .card { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1.5rem; margin-bottom: 1.5rem; }
-        .card h2 { margin-bottom: 1rem; color: #333; }
-        
-        .btn { background: #3498db; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
-        .btn:hover { background: #2980b9; }
-        .btn.secondary { background: #7f8c8d; }
-        .btn.danger { background: #e74c3c; }
-        
+        body {
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 1.1rem; letter-spacing: 0.2px; }
+
+        .nav {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 1.25rem;
+            display: flex;
+            gap: 0.25rem;
+            overflow-x: auto;
+        }
+        .nav button {
+            background: none;
+            border: none;
+            padding: 0.9rem 0.9rem;
+            cursor: pointer;
+            font-size: 0.95rem;
+            color: var(--muted);
+            border-bottom: 2px solid transparent;
+            white-space: nowrap;
+        }
+        .nav button:hover { color: var(--text); }
+        .nav button.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+
+        .main { padding: 1.25rem; max-width: 1100px; margin: 0 auto; }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .card h2 { margin-bottom: 0.75rem; font-size: 1rem; }
+
+        .btn {
+            background: var(--accent);
+            color: var(--surface);
+            border: 1px solid var(--accent);
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .btn:hover { background: var(--accent-weak); border-color: var(--accent-weak); }
+        .btn.secondary { background: transparent; color: var(--text); border-color: var(--border); }
+        .btn.secondary:hover { background: #f3f4f6; border-color: #d1d5db; }
+        .btn.danger { background: var(--danger); border-color: var(--danger); }
+        .btn.danger:hover { background: #991b1b; border-color: #991b1b; }
+
         table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #eee; }
-        th { background: #f9f9f9; font-weight: 600; color: #666; }
-        tr:hover { background: #f9f9f9; }
-        
-        .form-group { margin-bottom: 1rem; }
-        .form-group label { display: block; margin-bottom: 0.25rem; color: #666; font-size: 0.9rem; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; }
-        
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        th, td { padding: 0.65rem; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
+        th { color: var(--muted); font-weight: 600; background: #fafafa; }
+
+        .form-group { margin-bottom: 0.85rem; }
+        .form-group label { display: block; margin-bottom: 0.25rem; color: var(--muted); font-size: 0.85rem; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 0.55rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            background: var(--surface);
+            color: var(--text);
+        }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(17, 24, 39, 0.35); padding: 1rem; }
         .modal.active { display: flex; align-items: center; justify-content: center; }
-        .modal-content { background: white; border-radius: 8px; width: 500px; max-width: 90%; max-height: 90vh; overflow-y: auto; }
-        .modal-header { padding: 1rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .modal-content { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); width: 520px; max-width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 12px 30px rgba(0,0,0,0.18); }
+        .modal-header { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
         .modal-body { padding: 1rem; }
-        .modal-footer { padding: 1rem; border-top: 1px solid #eee; text-align: right; }
-        
-        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
-        .stat-card { background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .stat-card h3 { color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; }
-        .stat-card .value { font-size: 2rem; font-weight: bold; color: #2c3e50; }
-        .stat-card.paid .value { color: #27ae60; }
-        .stat-card.unpaid .value { color: #e74c3c; }
+        .modal-footer { padding: 0.85rem 1rem; border-top: 1px solid var(--border); text-align: right; display: flex; justify-content: flex-end; gap: 0.5rem; }
+
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; }
+        .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; box-shadow: var(--shadow); }
+        .stat-card h3 { color: var(--muted); font-size: 0.85rem; margin-bottom: 0.35rem; font-weight: 600; }
+        .stat-card .value { font-size: 1.6rem; font-weight: 700; color: var(--text); }
+        .stat-card.paid .value { color: var(--ok); }
+        .stat-card.unpaid .value { color: var(--warn); }
         
         .badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; }
-        .badge.complete { background: #d4edda; color: #155724; }
-        .badge.incomplete { background: #f8d7da; color: #721c24; }
-        .badge.paid { background: #d4edda; color: #155724; }
-        .badge.unpaid { background: #fff3cd; color: #856404; }
+        .badge.complete { background: #ecfdf5; color: #065f46; }
+        .badge.incomplete { background: #fff7ed; color: #9a3412; }
+        .badge.paid { background: #ecfdf5; color: #065f46; }
+        .badge.unpaid { background: #fff7ed; color: #9a3412; }
         
-        .empty { text-align: center; padding: 2rem; color: #999; }
+        .empty { text-align: center; padding: 1.25rem; color: var(--muted); }
         
         .tab-content { display: none; }
         .tab-content.active { display: block; }
@@ -63,8 +129,8 @@
 </head>
 <body>
     <div class="header">
-        <h1>Airbnb Maintenance Tracker</h1>
-        <button class="btn" onclick="logout()" style="background: rgba(255,255,255,0.2);">Logout</button>
+        <h1>Maintenance Tracker</h1>
+        <button class="btn secondary" onclick="logout()">Logout</button>
     </div>
     
     <div class="nav">
@@ -96,8 +162,8 @@
                 </div>
             </div>
             
-            <div class="card" style="margin-top: 1.5rem;">
-                <h2>Tasks Coming Up</h2>
+            <div class="card" style="margin-top: 1rem;">
+                <h2>Payments Due</h2>
                 <div id="tasks-coming-up"></div>
             </div>
         </div>
@@ -316,10 +382,7 @@
     </div>
 
     <script>
-        // Your deployed cloud API URL
-        const CLOUD_API_URL = 'https://airbnb-maintenence-tracker.onrender.com/api';
-        
-        const API = CLOUD_API_URL || 'http://localhost:5000/api';
+        const API = window.location.origin + '/api';
         
         // Check auth on load
         async function checkAuth() {
@@ -363,56 +426,64 @@
         // Dashboard
         async function loadDashboard() {
             const summary = await fetch(`${API}/reports/summary`).then(r => r.json());
-            document.getElementById('stat-paid').textContent = `$${summary.paid.toFixed(2)}`;
-            document.getElementById('stat-unpaid').textContent = `$${summary.unpaid.toFixed(2)}`;
-            document.getElementById('stat-total').textContent = `$${summary.total.toFixed(2)}`;
-            
-            // Get incomplete tasks
-            const [tasks, props] = await Promise.all([
-                fetch(`${API}/tasks?status=incomplete`).then(r => r.json()),
+            document.getElementById('stat-paid').textContent = `$${(summary.paid || 0).toFixed(2)}`;
+            document.getElementById('stat-unpaid').textContent = `$${(summary.unpaid || 0).toFixed(2)}`;
+            document.getElementById('stat-total').textContent = `$${(summary.total || 0).toFixed(2)}`;
+
+            const projection = await fetch(`${API}/reports/projection`).then(r => r.json());
+            document.getElementById('stat-projection').textContent = `$${(projection.yearly_projection || 0).toFixed(2)}`;
+
+            const [unpaidTasks, props] = await Promise.all([
+                fetch(`${API}/tasks?status=unpaid`).then(r => r.json()),
                 fetch(`${API}/properties`).then(r => r.json())
             ]);
-            
-            // Calculate projection from incomplete tasks
-            const projection = tasks.reduce((sum, t) => sum + (t.cost || 0), 0);
-            document.getElementById('stat-projection').textContent = `$${projection.toFixed(2)}`;
-            
-            const propMap = Object.fromEntries(props.map(p => [p.id, p.name]));
-            
-            // Sort by date (earliest first)
-            tasks.sort((a, b) => new Date(a.start_date || '9999') - new Date(b.start_date || '9999'));
-            
-            // Take first 10 tasks
-            const upcomingTasks = tasks.slice(0, 10);
-            
-            // Function to calculate days until date
+
+            const propMap = Object.fromEntries((props || []).map(p => [p.id, p.name]));
+
+            const normalizeDate = (dateStr) => {
+                if (!dateStr) return null;
+                const d = new Date(dateStr);
+                return isNaN(d) ? null : d;
+            };
+
             const getDaysUntil = (dateStr) => {
-                if (!dateStr) return '-';
+                const d = normalizeDate(dateStr);
+                if (!d) return '-';
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-                const taskDate = new Date(dateStr);
-                taskDate.setHours(0, 0, 0, 0);
-                const diff = Math.ceil((taskDate - today) / (1000 * 60 * 60 * 24));
-                if (diff < 0) return `${Math.abs(diff)} days overdue`;
+                d.setHours(0, 0, 0, 0);
+                const diff = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
+                if (diff < 0) return `${Math.abs(diff)}d overdue`;
                 if (diff === 0) return 'Today';
                 if (diff === 1) return 'Tomorrow';
-                return `${diff} days`;
+                return `${diff}d`;
             };
-            
-            let html = '<table><tr><th>Task</th><th>Property</th><th>Due In</th><th>Cost</th></tr>';
-            if (upcomingTasks.length === 0) {
-                html = '<p class="empty">No upcoming tasks</p>';
+
+            // Sort by due date (end_date preferred), earliest first
+            (unpaidTasks || []).sort((a, b) => {
+                const da = normalizeDate(a.end_date) || normalizeDate(a.start_date) || new Date('9999-12-31');
+                const db = normalizeDate(b.end_date) || normalizeDate(b.start_date) || new Date('9999-12-31');
+                return da - db;
+            });
+
+            const dueSoon = (unpaidTasks || []).slice(0, 10);
+
+            let html = '<table><tr><th>Task</th><th>Property</th><th>Pay In</th><th>Cost</th></tr>';
+            if (dueSoon.length === 0) {
+                html = '<div class="empty">No unpaid tasks</div>';
             } else {
-                for (const t of upcomingTasks) {
+                for (const t of dueSoon) {
+                    const dueDate = t.end_date || t.start_date;
                     html += `<tr>
                         <td>${t.description}</td>
                         <td>${propMap[t.property_id] || '-'}</td>
-                        <td>${getDaysUntil(t.start_date)}</td>
+                        <td>${getDaysUntil(dueDate)}</td>
                         <td>$${(t.cost || 0).toFixed(2)}</td>
                     </tr>`;
                 }
+                html += '</table>';
             }
-            html += '</table>';
+
             document.getElementById('tasks-coming-up').innerHTML = html;
         }
         
